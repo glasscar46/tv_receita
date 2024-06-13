@@ -6,7 +6,7 @@
       </meta> -->
       <connectorBase>
          <causalConnector id="onBeginStart">
-            <simpleCondition role="onEnd"/>
+            <simpleCondition role="onBegin"/>
             <simpleAction role="start"/>
          </causalConnector>
          <!-- <importBase   alias="conn"   documentURI="connBase.ncl"/> -->
@@ -23,23 +23,19 @@
          <descriptor id="dmain" region="mainRegion"/>
          <descriptor id="dresult" region="resultsRegion"/>
          <descriptor id="dsearch" region="searchRegion"/>
+         <descriptor id="ddetails" region="detailsRegion"/>
       </descriptorBase>
     </head>
     <body>
         <media id="searchField" src="search.lua" type="application/x-ginga-NCLua" descriptor="dsearch">
             <!-- <property name="searchEvent"/> -->
          </media>
-        <!-- <media id="resultsField" src="results.lua" type="application/x-ginga-NCLua" descriptor="dresult"/>
-        <media id="detailsField" src="details.lua" type="application/x-ginga-NCLua" descriptor="detailsRegion"/> -->
+        <media id="resultsField" src="results.lua" type="application/x-ginga-NCLua" descriptor="dresult"/>
+        <media id="detailsField" src="details.lua" type="application/x-ginga-NCLua" descriptor="ddetails"/>
         <media id="videoPlayer_" descriptor="dVideo" src="media/abertura.mp4"/>
 
-        <port id="pmedia" component="videoPlayer_"/>
+        <port id="psearch" component="searchField"/>
         <!-- <port id="presult" component="resultsField"/>-->
         <!-- <port id="pdetails" component="detailsField"/> -->
-
-        <link xconnector="onBeginStart">
-         <bind component="videoPlayer_" role="onBegin"/>
-         <bind component="searchField" role="start"/>
-       </link>
     </body>
 </ncl>
