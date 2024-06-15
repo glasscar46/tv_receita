@@ -1,90 +1,123 @@
-local keyMap = {
-    ["2"] = {"a", "b", "c"},
-    ["3"] = {"d", "e", "f"},
-    ["4"] = {"g", "h", "i"},
-    ["5"] = {"j", "k", "l"},
-    ["6"] = {"m", "n", "o"},
-    ["7"] = {"p", "q", "r", "s"},
-    ["8"] = {"t", "u", "v"},
-    ["9"] = {"w", "x", "y", "z"}
+text = nil
+local TEXT = ''
+local CHAR = ''
+
+local KEY, IDX = nil, -1
+local MAP = {
+	  ['1'] = { '1', '.', ',' }
+	, ['2'] = { 'a', 'b', 'c', '2' }
+	, ['3'] = { 'd', 'e', 'f', '3' }
+	, ['4'] = { 'g', 'h', 'i', '4' }
+	, ['5'] = { 'j', 'k', 'l', '5' }
+	, ['6'] = { 'm', 'n', 'o', '6' }
+	, ['7'] = { 'p', 'q', 'r', 's', '7' }
+	, ['8'] = { 't', 'u', 'v', '8' }
+	, ['9'] = { 'w', 'x', 'y', 'z', '9' }
+	, ['0'] = { '0' }
 }
--- Initialize input variables
-local inputText = ""
-local lastKey = ""
-local lastKeyTime = 0
-local tapIndex = 1
-local tapTimeout = 1.0 
 
-local searchString = ""
-local searchRegion = canvas:new(1920, 108)
-print("hello")
-local function handleKeyPress(key)
-    if keyMap[key] then
-        local currentTime = os.time()
-        
-        -- Check if the same key is pressed within the tap timeout period
-        if key == lastKey and (currentTime - lastKeyTime) < tapTimeout then
-            -- Cycle to the next letter in the key map
-            tapIndex = tapIndex % #keyMap[key] + 1
-            -- Remove the last character
-            inputText = inputText:sub(1, -2)
-        else
-            -- New key press, reset the tap index
-            tapIndex = 1
-        end
-        
-        -- Add the new character
-        inputText = inputText .. keyMap[key][tapIndex]
-        
-        -- Update the last key and time
-        lastKey = key
-        lastKeyTime = currentTime
-    elseif key == "0" then
-        inputText = inputText .. " "
-    end
+local UPPER = false
+local case = function (c)
+	return (UPPER and string.upper(c)) or c
 end
 
-local function drawRegion()
-    
-    canvas:attrColor('white')
-    canvas:drawRect("fill", 0, 0, 1920, 108)
-    searchRegion:drawText(10, 10, "Enter search query:")
-    canvas:compose(0,0,searchRegion)
-    canvas:flush()
+local dx, dy = canvas:attrSize()
+canvas:attrFont('vera', 3*dy/4)
+function redraw ()
+	canvas:attrColor('black')
+	canvas:drawRect('fill', 0,0, dx,dy)
+
+	canvas:attrColor('white')
+	canvas:drawText(0,0, TEXT..case(CHAR)..'|')
+
+	canvas:flush()
 end
 
-local function updateSearchString(key)
-    if key == "GREEN" then
-        event.post {
-            class = 'ncl',
-            type = 'attribution',
-            property  = 'searchEvent',
-            action = 'start',
-            value = inputText
-        }
-    elseif key == "RED" then
-        inputText = inputText:sub(1, -2)
-    elseif key:match("%a") or key:match("%d") then
-        handleKeyPress(key)
-    end
+local evt = {
+    class = 'ncl',
+    type  = 'attribution',
+    name  = 'text',
+}
 
-    searchRegion:attrColor("black")
-    searchRegion:drawRect("fill", 0, 50, 1920, 58)
-    searchRegion:attrColor("white")
-    searchRegion:drawText(10, 50, inputText)
-    searchRegion:flush()
+local function setText (new, outside)
+	TEXT = new or TEXT..case(CHAR)
+	text = TEXT
+	CHAR, UPPER = '', false
+	KEY, IDX = nil, -1
+
+	-- notifica o documento NCL
+	if not outside then
+		evt.value = TEXT
+		evt.action = 'start'; event.post(evt)
+		evt.action = 'stop';  event.post(evt)
+	end
 end
 
-event.register(function(evt)
-    print(evt.class)
-    if evt.class == 'key' and evt.type == 'release' then
-        updateSearchString(evt.key)
-        print("key trigger")
-    end
-end)
+local TIMER = nil
+local function timeout ()
+	return event.timer(1000,
+		function()
+			if KEY then
+				setText()
+			end
+		end)
+end
 
-event.register(function(evt)
-    if evt.type == 'presentation' and evt.action == 'start' then 
-        drawRegion()
-    end
-end)
+local function nclHandler (evt)
+	if evt.class ~= 'ncl' then return end
+
+	if evt.type == 'attribution' then
+		if evt.name == 'text' then
+			setText(evt.value, true)
+		end
+	end
+
+	redraw()
+	return true
+end
+event.register(nclHandler)
+
+local sel = {
+    class = 'ncl',
+    type  = 'presentation',
+    area = 'select',
+}
+
+local function keyHandler (evt)
+	if evt.class ~= 'key' then return end
+	if evt.type ~= 'press' then return true end
+	local key = evt.key
+
+	-- SELECT
+	if (key == 'ENTER' or key == 'GREEN') then
+        setText()
+		sel.action = 'start'; event.post(sel)
+		sel.action = 'stop';  event.post(sel)
+	-- BACKSPACE
+	elseif (key == 'CURSOR_LEFT') then
+		setText( (KEY and TEXT) or string.sub(TEXT, 1, -2) )
+
+	-- UPPER
+	elseif (key == 'CURSOR_UP') then
+		UPPER = not UPPER
+
+	-- SPACE
+	elseif (key == 'CURSOR_RIGHT') then
+		setText( (not KEY) and (TEXT..' ') )
+
+	-- NUMBER
+	elseif _G.tonumber(key) then
+		if KEY and (KEY ~= key) then
+			setText()
+		end
+		IDX = (IDX + 1) % #MAP[key]
+		CHAR = MAP[key][IDX+1]
+		KEY = key
+	end
+
+	if TIMER then TIMER() end
+	TIMER = timeout()
+	redraw()
+	return true
+end
+event.register(keyHandler)

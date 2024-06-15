@@ -1,6 +1,6 @@
 -- results.lua
 local json = require("json")
-local http = require("socket.http")
+local http = require("http")
 local apiUrl = "https://www.themealdb.com/api/json/v1/1/search.php?s="
 local resultsRegion = canvas:new(1920, 864)
 resultsRegion:attrColor("black")
@@ -36,8 +36,12 @@ local function displayResults(results)
 end
 
 event.register(function(evt)
-    if evt.class == 'ncl' and evt.type == 'attribution' and evt.property  == 'searchEvent' then
+    if evt.class == "user" then
+        print(evt.type, evt.value)
+    end
+    if evt.class == 'user' and evt.type == 'searchEvent' and evt.action  == 'stop' then
         local query = evt.value
+        print(query)
         local results = searchRecipes(query)
         displayResults(results)
     end
