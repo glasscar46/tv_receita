@@ -24,10 +24,10 @@ end
 local dx, dy = canvas:attrSize()
 canvas:attrFont('vera', 3*dy/4)
 function redraw ()
-	canvas:attrColor('black')
+	canvas:attrColor('white')
 	canvas:drawRect('fill', 0,0, dx,dy)
 
-	canvas:attrColor('white')
+	canvas:attrColor('blue')
 	canvas:drawText(0,0, TEXT..case(CHAR)..'|')
 
 	canvas:flush()
@@ -79,8 +79,8 @@ event.register(nclHandler)
 
 local sel = {
     class = 'ncl',
-    type  = 'presentation',
-    area = 'select',
+    type  = 'attribution',
+    property = 'select',
 }
 
 local function keyHandler (evt)
